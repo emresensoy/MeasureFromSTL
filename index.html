@@ -245,7 +245,7 @@
         <button class="btn ghost hidden" id="distBtn" type="button" style="padding:5px 12px;font-size:.78rem" aria-pressed="false">📐 Distance</button>
         <button class="btn ghost hidden" id="circBtn" type="button" style="padding:5px 12px;font-size:.78rem" aria-pressed="false">⌀ Circle</button>
         <button class="btn ghost hidden" id="clearBtn" type="button" style="padding:5px 12px;font-size:.78rem">Clear</button>
-        <span class="hint"><span class="kbd">Drag</span> rotate · <span class="kbd">Wheel</span> zoom</span>
+        <span class="hint"><span class="kbd">Drag</span> rotate · <span class="kbd">Right-drag</span> pan · <span class="kbd">Wheel</span> zoom</span>
       </div>
     </section>
 
@@ -374,7 +374,7 @@
         if(!tris || tris.count===0){ showErr("No triangles found in the STL."); return; }
         mesh=tris;
         stats=computeStats(mesh);
-        measureMode=""; measurePts=[]; hoverPt=null; zoom=1;
+        measureMode=""; measurePts=[]; hoverPt=null; zoom=1; panX=0; panY=0;
         stage.classList.remove("measure");
         $("#distBtn").classList.remove("hidden","on");
         $("#circBtn").classList.remove("hidden","on");
@@ -522,7 +522,7 @@
   });
 
   /* ---------- Lightweight 3D renderer ---------- */
-  let az=-0.7, el=0.5, zoom=1;
+  let az=-0.7, el=0.5, zoom=1, panX=0, panY=0;
   let measureMode="", measurePts=[], hoverPt=null, hoverPending=false; // ""|"dist"|"circle"
   const maxPts=()=>measureMode==="circle"?3:2;
   const ctx=canvas.getContext("2d");
@@ -548,7 +548,7 @@
   function getView(){
     const W=canvas.width,H=canvas.height;
     const diag=stats?(stats.diag||1):1;
-    return {ox:W/2, oy:H/2, scale:Math.min(W,H)/diag*0.62*zoom};
+    return {ox:W/2+panX, oy:H/2+panY, scale:Math.min(W,H)/diag*0.62*zoom};
   }
   function projectPoint(mx,my,mz){
     const c=stats.center; const {ox,oy,scale}=getView();
@@ -812,19 +812,28 @@
   }
 
   /* ---------- Interaction ---------- */
-  let dragging=false, lx=0, ly=0, downX=0, downY=0, moved=false;
+  let dragMode=null, lx=0, ly=0, downX=0, downY=0, moved=false; // dragMode: null|"rotate"|"pan"
+  stage.addEventListener("contextmenu",e=>e.preventDefault()); // allow right-drag pan
   stage.addEventListener("pointerdown",e=>{
     if(!mesh)return;
-    dragging=true;moved=false;
+    // right button (or middle) pans; left rotates
+    dragMode = (e.button===2 || e.button===1) ? "pan" : "rotate";
+    moved=false;
     lx=downX=e.clientX;ly=downY=e.clientY;
     stage.classList.add("dragging");
+    hoverPt=null;
     stage.setPointerCapture(e.pointerId);
   });
   stage.addEventListener("pointermove",e=>{
-    if(dragging){
+    if(dragMode){
       if(Math.hypot(e.clientX-downX,e.clientY-downY)>4) moved=true;
-      az+=(e.clientX-lx)*0.01; el+=(e.clientY-ly)*0.01;
-      el=Math.max(-1.5,Math.min(1.5,el));
+      if(dragMode==="pan"){
+        const ratio=canvas.width/stage.getBoundingClientRect().width;
+        panX+=(e.clientX-lx)*ratio; panY+=(e.clientY-ly)*ratio;
+      }else{
+        az+=(e.clientX-lx)*0.01; el+=(e.clientY-ly)*0.01;
+        el=Math.max(-1.5,Math.min(1.5,el));
+      }
       lx=e.clientX;ly=e.clientY;
       requestAnimationFrame(render);
       return;
@@ -841,9 +850,10 @@
     }
   });
   ["pointerup","pointercancel"].forEach(ev=>stage.addEventListener(ev,e=>{
-    const wasDragging=dragging;
-    dragging=false;stage.classList.remove("dragging");
-    if(ev==="pointerup" && measureMode && wasDragging && !moved){
+    const wasMode=dragMode;
+    dragMode=null;stage.classList.remove("dragging");
+    // only a left-button click (rotate mode, no drag) places a measurement point
+    if(ev==="pointerup" && measureMode && wasMode==="rotate" && !moved){
       const p=pickPoint(e.clientX,e.clientY);
       if(p){
         if(measurePts.length>=maxPts()) measurePts=[];
