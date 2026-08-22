@@ -1,0 +1,932 @@
+<title>Shaft Gauge</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --bg:#eceef1;
+    --panel:#ffffff;
+    --panel-2:#f6f7f9;
+    --ink:#161b24;
+    --muted:#5a6474;
+    --faint:#8b94a3;
+    --line:#dbdfe6;
+    --line-strong:#c4cad4;
+    --accent:#0d7c86;
+    --accent-ink:#0a5b63;
+    --amber:#c2610b;
+    --amber-soft:rgba(194,97,11,.12);
+    --accent-soft:rgba(13,124,134,.10);
+    --stage:#e3e7ec;
+    --stage-grid:#d3d9e1;
+    --shadow:0 1px 2px rgba(20,27,36,.06),0 8px 24px rgba(20,27,36,.06);
+    --good:#1f8a4c;
+  }
+  :root:not([data-theme="light"]){}
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#12151b;
+      --panel:#1a1f28;
+      --panel-2:#20262f;
+      --ink:#e8ebf0;
+      --muted:#9aa4b3;
+      --faint:#6b7482;
+      --line:#2b323d;
+      --line-strong:#3a424f;
+      --accent:#2bb6c4;
+      --accent-ink:#7fd8e1;
+      --amber:#e08a3c;
+      --amber-soft:rgba(224,138,60,.14);
+      --accent-soft:rgba(43,182,196,.12);
+      --stage:#0d1015;
+      --stage-grid:#1c222b;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+      --good:#41c07a;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#12151b;
+    --panel:#1a1f28;
+    --panel-2:#20262f;
+    --ink:#e8ebf0;
+    --muted:#9aa4b3;
+    --faint:#6b7482;
+    --line:#2b323d;
+    --line-strong:#3a424f;
+    --accent:#2bb6c4;
+    --accent-ink:#7fd8e1;
+    --amber:#e08a3c;
+    --amber-soft:rgba(224,138,60,.14);
+    --accent-soft:rgba(43,182,196,.12);
+    --stage:#0d1015;
+    --stage-grid:#1c222b;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+    --good:#41c07a;
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    line-height:1.5;-webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 22px 56px}
+
+  header.top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+  .brand{display:flex;align-items:center;gap:11px}
+  .mark{
+    width:34px;height:34px;border-radius:8px;flex:none;
+    background:var(--accent);color:#fff;display:grid;place-items:center;
+    font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:18px;
+    box-shadow:var(--shadow);
+  }
+  h1{font-size:1.4rem;font-weight:700;margin:0;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:.9rem;margin:2px 0 0}
+  .privacy{
+    margin-left:auto;font-size:.72rem;color:var(--muted);
+    display:inline-flex;align-items:center;gap:7px;
+    padding:6px 11px;border:1px solid var(--line);border-radius:999px;background:var(--panel);
+  }
+  .privacy b{color:var(--good);font-weight:600}
+
+  .grid{display:grid;grid-template-columns:1.35fr 1fr;gap:18px;margin-top:22px}
+  @media (max-width:860px){.grid{grid-template-columns:1fr}}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+
+  /* Stage / drop */
+  .stage-card{overflow:hidden;position:relative;display:flex;flex-direction:column}
+  .stage{position:relative;aspect-ratio:4/3;width:100%;background:var(--stage);cursor:grab}
+  .stage.dragging{cursor:grabbing}
+  #view{display:block;width:100%;height:100%;touch-action:none}
+  .drop{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:14px;text-align:center;
+    padding:28px;transition:background .15s,border-color .15s;
+  }
+  .drop.hover{background:var(--accent-soft)}
+  .drop .ring{
+    width:70px;height:70px;border-radius:50%;border:2px dashed var(--line-strong);
+    display:grid;place-items:center;color:var(--accent);
+  }
+  .drop.hover .ring{border-color:var(--accent)}
+  .drop h2{margin:0;font-size:1.05rem;font-weight:600}
+  .drop p{margin:0;color:var(--muted);font-size:.85rem;max-width:34ch}
+  .btn{
+    font:inherit;font-weight:600;font-size:.9rem;cursor:pointer;
+    background:var(--accent);color:#fff;border:none;border-radius:9px;padding:10px 18px;
+    box-shadow:var(--shadow);transition:filter .12s,transform .04s;
+  }
+  .btn:hover{filter:brightness(1.06)}
+  .btn:active{transform:translateY(1px)}
+  .btn.ghost{background:var(--panel);color:var(--ink);border:1px solid var(--line-strong);box-shadow:none}
+  .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  .stage-bar{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    padding:9px 12px;border-top:1px solid var(--line);background:var(--panel-2);
+    font-size:.78rem;color:var(--muted);
+  }
+  .stage-bar .fname{color:var(--ink);font-weight:600;font-family:"IBM Plex Mono",monospace;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:44ch}
+  .stage-bar .hint{margin-left:auto;display:inline-flex;gap:6px;align-items:center}
+  .kbd{font-family:"IBM Plex Mono",monospace;font-size:.72rem;border:1px solid var(--line-strong);
+    border-radius:5px;padding:1px 6px;background:var(--panel);color:var(--muted)}
+
+  /* Readout */
+  .panel-pad{padding:18px 18px 20px}
+  .eyebrow{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:600;margin:0 0 12px}
+  .empty-note{color:var(--muted);font-size:.9rem}
+
+  .primary{
+    display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;
+  }
+  .metric{
+    border:1px solid var(--line);border-radius:11px;padding:13px 14px;background:var(--panel-2);position:relative;
+  }
+  .metric .lbl{font-size:.72rem;color:var(--muted);font-weight:500;display:flex;align-items:center;gap:7px}
+  .metric .val{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:1.55rem;letter-spacing:-.01em;
+    margin-top:5px;font-variant-numeric:tabular-nums}
+  .metric .val .u{font-size:.8rem;color:var(--muted);font-weight:500;margin-left:3px}
+  .metric.dia{border-color:color-mix(in srgb,var(--amber) 45%,var(--line));background:var(--amber-soft)}
+  .metric.dia .val{color:var(--amber)}
+  .metric.len{border-color:color-mix(in srgb,var(--accent) 45%,var(--line));background:var(--accent-soft)}
+  .metric.len .val{color:var(--accent-ink)}
+  .swatch{width:9px;height:9px;border-radius:2px;flex:none}
+
+  .axis-row{display:flex;align-items:center;gap:8px;margin:2px 0 16px;flex-wrap:wrap}
+  .axis-row .cap{font-size:.75rem;color:var(--muted);margin-right:2px}
+  .seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:8px;overflow:hidden}
+  .seg button{
+    font:inherit;font-size:.8rem;font-weight:600;font-family:"IBM Plex Mono",monospace;
+    border:none;background:var(--panel);color:var(--muted);padding:6px 12px;cursor:pointer;border-right:1px solid var(--line)}
+  .seg button:last-child{border-right:none}
+  .seg button.on{background:var(--accent);color:#fff}
+  .seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+
+  table.dims{width:100%;border-collapse:collapse;font-size:.86rem}
+  table.dims th{text-align:left;font-weight:500;color:var(--muted);font-size:.72rem;
+    text-transform:uppercase;letter-spacing:.06em;padding:0 0 7px;border-bottom:1px solid var(--line)}
+  table.dims th.num,table.dims td.num{text-align:right;font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+  table.dims td{padding:8px 0;border-bottom:1px solid var(--line)}
+  table.dims tr:last-child td{border-bottom:none}
+  .axtag{display:inline-flex;align-items:center;gap:8px;font-weight:600}
+  .dot{width:10px;height:10px;border-radius:3px;flex:none}
+  .dot.x{background:#d1495b}.dot.y{background:#2a9d5c}.dot.z{background:#3d6fd1}
+  .isaxis{font-size:.68rem;color:var(--amber);font-weight:600;margin-left:6px}
+
+  .meta{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;margin-top:16px;
+    padding-top:14px;border-top:1px solid var(--line)}
+  .meta div{font-size:.82rem;color:var(--muted)}
+  .meta b{color:var(--ink);font-family:"IBM Plex Mono",monospace;font-weight:600;font-variant-numeric:tabular-nums}
+
+  .note{margin-top:16px;font-size:.76rem;color:var(--muted);line-height:1.55;
+    padding:11px 13px;border-left:3px solid var(--line-strong);background:var(--panel-2);border-radius:0 8px 8px 0}
+  .note b{color:var(--ink)}
+
+  footer{margin-top:26px;color:var(--faint);font-size:.75rem;text-align:center}
+  .err{color:#c23b3b;font-size:.85rem;margin-top:10px}
+
+  /* measure */
+  .stage.measure{cursor:crosshair}
+  .stage.measure.dragging{cursor:grabbing}
+  #measureBtn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .measure-hud{
+    position:absolute;top:10px;left:10px;font-family:"IBM Plex Mono",monospace;
+    font-size:.8rem;font-weight:600;background:var(--panel);color:var(--ink);
+    border:1px solid var(--line-strong);border-radius:8px;padding:6px 11px;box-shadow:var(--shadow);
+    pointer-events:none;display:inline-flex;align-items:center;gap:8px;max-width:calc(100% - 20px)
+  }
+  .measure-hud .d{color:var(--accent-ink)}
+  .mblock{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  .comp{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+  .comp div.c{background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:8px 10px}
+  .comp .cl{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  .comp .cv{font-family:"IBM Plex Mono",monospace;font-weight:600;font-variant-numeric:tabular-nums;margin-top:2px;font-size:.95rem}
+
+  input[type=file]{display:none}
+  .hidden{display:none!important}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="mark">⌀</div>
+      <div>
+        <h1>Shaft Gauge</h1>
+        <p class="sub">Read diameter and length from an STL model, in millimeters</p>
+      </div>
+    </div>
+    <span class="privacy"><b>●</b> File never leaves your device · processed entirely in the browser</span>
+  </header>
+
+  <div class="grid">
+    <!-- STAGE -->
+    <section class="card stage-card">
+      <div class="stage" id="stage">
+        <canvas id="view"></canvas>
+        <div class="measure-hud hidden" id="hud"></div>
+        <div class="drop" id="drop">
+          <div class="ring">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M12 4l-4 4M12 4l4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+          </div>
+          <div>
+            <h2>Drop your STL file</h2>
+            <p>Drag &amp; drop or browse. Binary and ASCII STL are both supported.</p>
+          </div>
+          <button class="btn" id="pickBtn" type="button">Choose file</button>
+          <input type="file" id="file" accept=".stl,model/stl,application/vnd.ms-pki.stl,application/octet-stream">
+        </div>
+      </div>
+      <div class="stage-bar">
+        <span class="fname" id="fname">No file loaded</span>
+        <button class="btn ghost hidden" id="reloadBtn" type="button" style="padding:5px 12px;font-size:.78rem">Load another</button>
+        <button class="btn ghost hidden" id="distBtn" type="button" style="padding:5px 12px;font-size:.78rem" aria-pressed="false">📐 Distance</button>
+        <button class="btn ghost hidden" id="circBtn" type="button" style="padding:5px 12px;font-size:.78rem" aria-pressed="false">⌀ Circle</button>
+        <button class="btn ghost hidden" id="clearBtn" type="button" style="padding:5px 12px;font-size:.78rem">Clear</button>
+        <span class="hint"><span class="kbd">Drag</span> rotate · <span class="kbd">Wheel</span> zoom</span>
+      </div>
+    </section>
+
+    <!-- READOUT -->
+    <section class="card">
+      <div class="panel-pad">
+        <p class="eyebrow">Measurement results</p>
+
+        <div id="empty">
+          <p class="empty-note">Load an STL file — bounding-box dimensions, length and an estimated diameter will appear here.</p>
+        </div>
+
+        <div id="results" class="hidden">
+          <div class="primary">
+            <div class="metric len">
+              <div class="lbl"><span class="swatch" style="background:var(--accent)"></span>Length (axis)</div>
+              <div class="val"><span id="mLen">—</span><span class="u">mm</span></div>
+            </div>
+            <div class="metric dia">
+              <div class="lbl"><span class="swatch" style="background:var(--amber)"></span>Diameter ⌀</div>
+              <div class="val"><span id="mDia">—</span><span class="u">mm</span></div>
+            </div>
+          </div>
+
+          <div class="axis-row">
+            <span class="cap">Shaft axis:</span>
+            <div class="seg" id="axisSeg" role="group" aria-label="Axis selection">
+              <button data-ax="auto" class="on" type="button">Auto</button>
+              <button data-ax="0" type="button">X</button>
+              <button data-ax="1" type="button">Y</button>
+              <button data-ax="2" type="button">Z</button>
+            </div>
+          </div>
+
+          <table class="dims">
+            <thead><tr><th>Axis</th><th class="num">Size (mm)</th><th class="num">Min</th><th class="num">Max</th></tr></thead>
+            <tbody id="dimBody"></tbody>
+          </table>
+
+          <div class="meta">
+            <div>Diameter (max ⌀) <b id="mDiaMax">—</b></div>
+            <div>Bounding diagonal <b id="mDiag">—</b></div>
+            <div>Volume <b id="mVol">—</b></div>
+            <div>Triangles <b id="mTri">—</b></div>
+          </div>
+
+          <div class="mblock hidden" id="mblock">
+            <p class="eyebrow" style="margin-bottom:10px">Point-to-point measurement</p>
+            <div class="metric len">
+              <div class="lbl"><span class="swatch" style="background:var(--accent)"></span>Distance between two points</div>
+              <div class="val"><span id="mDist">—</span><span class="u">mm</span></div>
+            </div>
+            <div class="comp">
+              <div class="c"><div class="cl">ΔX</div><div class="cv" id="mDx">—</div></div>
+              <div class="c"><div class="cl">ΔY</div><div class="cv" id="mDy">—</div></div>
+              <div class="c"><div class="cl">ΔZ</div><div class="cv" id="mDz">—</div></div>
+            </div>
+          </div>
+
+          <div class="mblock hidden" id="cblock">
+            <p class="eyebrow" style="margin-bottom:10px">Circle from three points</p>
+            <div class="metric dia">
+              <div class="lbl"><span class="swatch" style="background:var(--amber)"></span>Diameter ⌀</div>
+              <div class="val"><span id="cDia">—</span><span class="u">mm</span></div>
+            </div>
+            <div class="comp">
+              <div class="c"><div class="cl">Radius</div><div class="cv" id="cRad">—</div></div>
+              <div class="c"><div class="cl">Circumference</div><div class="cv" id="cCirc">—</div></div>
+              <div class="c"><div class="cl">Status</div><div class="cv" id="cStat" style="font-size:.8rem">—</div></div>
+            </div>
+          </div>
+
+          <div class="note">
+            <b>How the diameter is found:</b> from the distance of each point to the selected axis — the main value is the 99th percentile (rejects outliers), while "max ⌀" is the farthest point. Reliable for cylindrical parts; for irregular geometry rely on the bounding-box dimensions.
+          </div>
+          <div class="note" style="border-left-color:var(--amber)">
+            <b>Unit note:</b> STL files are unitless. Values are read without scaling and assumed to be in <b>mm</b> (the CAD convention). If your model was built in cm/inch, convert the results accordingly.
+          </div>
+          <p class="err hidden" id="err"></p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer>Measurements are for reference · rely on the original CAD/drawing for manufacturing tolerances</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const $ = s => document.querySelector(s);
+  const fileInput=$("#file"), drop=$("#drop"), stage=$("#stage"),
+        canvas=$("#view"), fnameEl=$("#fname"), errEl=$("#err"),
+        results=$("#results"), empty=$("#empty"), dimBody=$("#dimBody");
+
+  let mesh=null;          // {tris:Float32Array normals+verts, count}
+  let stats=null;         // computed geometry stats
+  let axisMode="auto";    // "auto"|0|1|2
+
+  /* ---------- File input wiring ---------- */
+  $("#pickBtn").addEventListener("click",()=>fileInput.click());
+  $("#reloadBtn").addEventListener("click",()=>fileInput.click());
+  fileInput.addEventListener("change",e=>{ if(e.target.files[0]) loadFile(e.target.files[0]); });
+
+  ["dragenter","dragover"].forEach(ev=>stage.addEventListener(ev,e=>{
+    e.preventDefault();drop.classList.add("hover");drop.classList.remove("hidden");
+  }));
+  ["dragleave","drop"].forEach(ev=>stage.addEventListener(ev,e=>{
+    e.preventDefault();drop.classList.remove("hover");
+  }));
+  stage.addEventListener("drop",e=>{
+    const f=e.dataTransfer.files[0];
+    if(f) loadFile(f);
+  });
+
+  function loadFile(f){
+    errEl.classList.add("hidden");
+    if(!/\.stl$/i.test(f.name) && f.type!=="application/octet-stream"){
+      showErr("This doesn't look like a .stl file: "+f.name); return;
+    }
+    fnameEl.textContent=f.name;
+    const r=new FileReader();
+    r.onload=()=>{
+      try{
+        const tris=parseSTL(r.result);
+        if(!tris || tris.count===0){ showErr("No triangles found in the STL."); return; }
+        mesh=tris;
+        stats=computeStats(mesh);
+        measureMode=""; measurePts=[]; hoverPt=null; zoom=1;
+        stage.classList.remove("measure");
+        $("#distBtn").classList.remove("hidden","on");
+        $("#circBtn").classList.remove("hidden","on");
+        drop.classList.add("hidden");
+        $("#reloadBtn").classList.remove("hidden");
+        empty.classList.add("hidden");
+        results.classList.remove("hidden");
+        render(); update(); updateMeasure();
+      }catch(err){ showErr("Could not read the file: "+err.message); console.error(err); }
+    };
+    r.onerror=()=>showErr("File read error.");
+    r.readAsArrayBuffer(f);
+  }
+  function showErr(m){ errEl.textContent=m; errEl.classList.remove("hidden"); }
+
+  /* ---------- STL parsing (binary + ASCII) ---------- */
+  function parseSTL(buf){
+    const dv=new DataView(buf);
+    // decide binary vs ascii
+    const n=buf.byteLength>=84 ? dv.getUint32(80,true) : 0;
+    const binarySize=84+n*50;
+    let isBinary = buf.byteLength===binarySize && n>0;
+    if(!isBinary){
+      // check header text for "solid" -> maybe ascii; but some binaries also start solid.
+      const head=new TextDecoder().decode(new Uint8Array(buf,0,Math.min(512,buf.byteLength))).trim();
+      if(head.startsWith("solid") && /facet|vertex/i.test(head)) isBinary=false;
+      else if(buf.byteLength===binarySize) isBinary=true;
+    }
+    return isBinary ? parseBinary(dv,n) : parseAscii(new TextDecoder().decode(buf));
+  }
+  function parseBinary(dv,n){
+    const verts=new Float32Array(n*9), norms=new Float32Array(n*3);
+    let off=84;
+    for(let i=0;i<n;i++){
+      norms[i*3]=dv.getFloat32(off,true);
+      norms[i*3+1]=dv.getFloat32(off+4,true);
+      norms[i*3+2]=dv.getFloat32(off+8,true);
+      off+=12;
+      for(let v=0;v<9;v++){ verts[i*9+v]=dv.getFloat32(off,true); off+=4; }
+      off+=2; // attribute byte count
+    }
+    return {verts,norms,count:n};
+  }
+  function parseAscii(txt){
+    const vs=[],ns=[];
+    const re=/facet\s+normal\s+([^\n]+?)\s+outer\s+loop\s+vertex\s+([^\n]+?)\s+vertex\s+([^\n]+?)\s+vertex\s+([^\n]+?)\s+endloop/gi;
+    const norm=txt.replace(/\s+/g," ");
+    let m;
+    while((m=re.exec(norm))){
+      const nrm=m[1].trim().split(/\s+/).map(Number);
+      ns.push(nrm[0]||0,nrm[1]||0,nrm[2]||0);
+      for(let k=2;k<=4;k++){
+        const p=m[k].trim().split(/\s+/).map(Number);
+        vs.push(p[0],p[1],p[2]);
+      }
+    }
+    return {verts:new Float32Array(vs),norms:new Float32Array(ns),count:vs.length/9};
+  }
+
+  /* ---------- Geometry stats ---------- */
+  function computeStats(m){
+    const v=m.verts, n=m.count*3;
+    let minx=Infinity,miny=Infinity,minz=Infinity,maxx=-Infinity,maxy=-Infinity,maxz=-Infinity;
+    for(let i=0;i<n;i++){
+      const x=v[i*3],y=v[i*3+1],z=v[i*3+2];
+      if(x<minx)minx=x; if(x>maxx)maxx=x;
+      if(y<miny)miny=y; if(y>maxy)maxy=y;
+      if(z<minz)minz=z; if(z>maxz)maxz=z;
+    }
+    const size=[maxx-minx,maxy-miny,maxz-minz];
+    const min=[minx,miny,minz], max=[maxx,maxy,maxz];
+    const center=[(minx+maxx)/2,(miny+maxy)/2,(minz+maxz)/2];
+    const diag=Math.hypot(size[0],size[1],size[2]);
+    // volume via signed tetrahedra
+    let vol6=0;
+    for(let t=0;t<m.count;t++){
+      const o=t*9;
+      const ax=v[o],ay=v[o+1],az=v[o+2];
+      const bx=v[o+3],by=v[o+4],bz=v[o+5];
+      const cx=v[o+6],cy=v[o+7],cz=v[o+8];
+      vol6 += ax*(by*cz-bz*cy) - ay*(bx*cz-bz*cx) + az*(bx*cy-by*cx);
+    }
+    const volume=Math.abs(vol6)/6;
+    return {size,min,max,center,diag,volume,radial:{}};
+  }
+  // diameter about a chosen axis
+  function diameterForAxis(m,center,axis){
+    const v=m.verts, N=m.count*3;
+    const a=(axis+1)%3, b=(axis+2)%3;
+    const ca=center[a], cb=center[b];
+    const rs=new Float64Array(N);
+    let maxr=0;
+    for(let i=0;i<N;i++){
+      const da=v[i*3+a]-ca, db=v[i*3+b]-cb;
+      const r=Math.hypot(da,db);
+      rs[i]=r; if(r>maxr)maxr=r;
+    }
+    rs.sort();
+    const p99=rs[Math.min(N-1,Math.floor(0.99*(N-1)))];
+    return {p99:p99*2, max:maxr*2};
+  }
+
+  const fmt=(x,d=2)=>{
+    if(!isFinite(x))return"—";
+    const s=x.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
+    return s;
+  };
+
+  function update(){
+    if(!stats) return;
+    const s=stats.size;
+    // pick length axis
+    let lenAxis = axisMode==="auto" ? s.indexOf(Math.max(...s)) : Number(axisMode);
+    const dia=diameterForAxis(mesh,stats.center,lenAxis);
+    stats.diaAxis=lenAxis;
+
+    $("#mLen").textContent=fmt(s[lenAxis]);
+    $("#mDia").textContent=fmt(dia.p99);
+    $("#mDiaMax").textContent=fmt(dia.max)+" mm";
+    $("#mDiag").textContent=fmt(stats.diag)+" mm";
+    const vol=stats.volume;
+    $("#mVol").textContent = vol>=1000 ? fmt(vol/1000,2)+" cm³" : fmt(vol,1)+" mm³";
+    $("#mTri").textContent=mesh.count.toLocaleString("en-US");
+
+    // dims table
+    const names=["X","Y","Z"], cls=["x","y","z"];
+    dimBody.innerHTML="";
+    for(let i=0;i<3;i++){
+      const tr=document.createElement("tr");
+      tr.innerHTML=`<td><span class="axtag"><span class="dot ${cls[i]}"></span>${names[i]}</span>${i===lenAxis?'<span class="isaxis">↑ axis</span>':''}</td>`+
+        `<td class="num">${fmt(s[i])}</td>`+
+        `<td class="num">${fmt(stats.min[i])}</td>`+
+        `<td class="num">${fmt(stats.max[i])}</td>`;
+      dimBody.appendChild(tr);
+    }
+    // axis buttons
+    document.querySelectorAll("#axisSeg button").forEach(btn=>{
+      btn.classList.toggle("on", btn.dataset.ax===String(axisMode));
+    });
+    render();
+  }
+
+  document.querySelectorAll("#axisSeg button").forEach(btn=>{
+    btn.addEventListener("click",()=>{ axisMode=btn.dataset.ax; update(); });
+  });
+
+  /* ---------- Lightweight 3D renderer ---------- */
+  let az=-0.7, el=0.5, zoom=1;
+  let measureMode="", measurePts=[], hoverPt=null, hoverPending=false; // ""|"dist"|"circle"
+  const maxPts=()=>measureMode==="circle"?3:2;
+  const ctx=canvas.getContext("2d");
+  let dpr=Math.min(window.devicePixelRatio||1,2);
+
+  function fitCanvas(){
+    const r=stage.getBoundingClientRect();
+    dpr=Math.min(window.devicePixelRatio||1,2);
+    canvas.width=Math.round(r.width*dpr);
+    canvas.height=Math.round(r.height*dpr);
+    if(mesh) render();
+  }
+  window.addEventListener("resize",fitCanvas);
+
+  function rot(x,y,z){
+    // yaw about Y then pitch about X
+    const cy=Math.cos(az),sy=Math.sin(az);
+    let X=cy*x+sy*z, Z=-sy*x+cy*z, Y=y;
+    const cx=Math.cos(el),sx=Math.sin(el);
+    let Y2=cx*Y-sx*Z, Z2=sx*Y+cx*Z;
+    return [X,Y2,Z2];
+  }
+  function getView(){
+    const W=canvas.width,H=canvas.height;
+    const diag=stats?(stats.diag||1):1;
+    return {ox:W/2, oy:H/2, scale:Math.min(W,H)/diag*0.62*zoom};
+  }
+  function projectPoint(mx,my,mz){
+    const c=stats.center; const {ox,oy,scale}=getView();
+    const r=rot(mx-c[0],my-c[1],mz-c[2]);
+    return [ox+r[0]*scale, oy-r[1]*scale, r[2]];
+  }
+
+  function render(){
+    if(!mesh||!stats){ ctx.clearRect(0,0,canvas.width,canvas.height); return; }
+    const W=canvas.width,H=canvas.height;
+    ctx.clearRect(0,0,W,H);
+    // subtle grid backdrop
+    drawGrid(W,H);
+
+    const c=stats.center;
+    const {ox,oy,scale}=getView();
+    const light=(()=>{const l=[0.4,0.75,0.5];const m=Math.hypot(...l);return[l[0]/m,l[1]/m,l[2]/m];})();
+
+    const v=mesh.verts, nr=mesh.norms, count=mesh.count;
+    // build projected triangles with depth
+    const order=new Array(count);
+    const proj=new Float64Array(count*6); // x0,y0,x1,y1,x2,y2
+    const depth=new Float64Array(count);
+    const shade=new Float64Array(count);
+    for(let t=0;t<count;t++){
+      const o=t*9;
+      let zc=0;
+      for(let k=0;k<3;k++){
+        const p=rot(v[o+k*3]-c[0], v[o+k*3+1]-c[1], v[o+k*3+2]-c[2]);
+        proj[t*6+k*2]=ox+p[0]*scale;
+        proj[t*6+k*2+1]=oy-p[1]*scale;
+        zc+=p[2];
+      }
+      depth[t]=zc/3;
+      const nn=rot(nr[t*3],nr[t*3+1],nr[t*3+2]);
+      let d=nn[0]*light[0]+nn[1]*light[1]+nn[2]*light[2];
+      shade[t]=Math.max(0.18, Math.abs(d)*0.9+0.1);
+      order[t]=t;
+    }
+    order.sort((a,b)=>depth[a]-depth[b]);
+
+    const dark=isDark();
+    const base=dark?[120,170,178]:[150,168,182];
+    for(let i=0;i<count;i++){
+      const t=order[i], s=shade[t];
+      const R=Math.round(base[0]*s+ (dark?12:60)*(1-s));
+      const G=Math.round(base[1]*s+ (dark?16:66)*(1-s));
+      const B=Math.round(base[2]*s+ (dark?20:72)*(1-s));
+      ctx.beginPath();
+      ctx.moveTo(proj[t*6],proj[t*6+1]);
+      ctx.lineTo(proj[t*6+2],proj[t*6+3]);
+      ctx.lineTo(proj[t*6+4],proj[t*6+5]);
+      ctx.closePath();
+      ctx.fillStyle=`rgb(${R},${G},${B})`;
+      ctx.fill();
+    }
+    drawBBox(ox,oy,scale,c);
+    drawMeasure();
+    drawTriad(W,H);
+  }
+
+  /* ---------- Measurement overlay ---------- */
+  function drawMeasure(){
+    if(!measurePts.length && !hoverPt) return;
+    const acc=getVar("--accent");
+    if(measureMode==="dist" && measurePts.length===2){
+      const A=projectPoint.apply(null,measurePts[0]);
+      const B=projectPoint.apply(null,measurePts[1]);
+      ctx.setLineDash([]);
+      ctx.strokeStyle=acc; ctx.lineWidth=2*dpr;
+      ctx.beginPath();ctx.moveTo(A[0],A[1]);ctx.lineTo(B[0],B[1]);ctx.stroke();
+      drawTag(fmt(dist3(measurePts[0],measurePts[1]))+" mm",(A[0]+B[0])/2,(A[1]+B[1])/2);
+    }
+    if(measureMode==="circle" && measurePts.length===3){
+      const cir=fitCircle(measurePts[0],measurePts[1],measurePts[2]);
+      if(cir.ok){
+        const amb=getVar("--amber");
+        // build in-plane orthonormal axes
+        const u=norm3(sub3(measurePts[0],cir.center));
+        const v=norm3(cross3(cir.normal,u));
+        ctx.setLineDash([]); ctx.strokeStyle=amb; ctx.lineWidth=2*dpr;
+        ctx.beginPath();
+        const N=72;
+        for(let i=0;i<=N;i++){
+          const a=2*Math.PI*i/N;
+          const p=[
+            cir.center[0]+cir.radius*(Math.cos(a)*u[0]+Math.sin(a)*v[0]),
+            cir.center[1]+cir.radius*(Math.cos(a)*u[1]+Math.sin(a)*v[1]),
+            cir.center[2]+cir.radius*(Math.cos(a)*u[2]+Math.sin(a)*v[2])
+          ];
+          const s=projectPoint.apply(null,p);
+          i===0?ctx.moveTo(s[0],s[1]):ctx.lineTo(s[0],s[1]);
+        }
+        ctx.stroke();
+        const cs=projectPoint.apply(null,cir.center);
+        drawMarker(cs,amb,"");
+        drawTag("⌀ "+fmt(cir.radius*2)+" mm",cs[0],cs[1]-16*dpr);
+      }
+    }
+    measurePts.forEach((p,i)=>drawMarker(projectPoint.apply(null,p),acc,String(i+1)));
+    if(hoverPt) drawHover(projectPoint.apply(null,hoverPt.point),hoverPt.snapped);
+  }
+
+  /* vector helpers + 3-point circle fit */
+  function sub3(a,b){return[a[0]-b[0],a[1]-b[1],a[2]-b[2]];}
+  function cross3(a,b){return[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+  function dot3(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
+  function len3(a){return Math.hypot(a[0],a[1],a[2]);}
+  function norm3(a){const l=len3(a)||1;return[a[0]/l,a[1]/l,a[2]/l];}
+  function fitCircle(A,B,C){
+    const ab=sub3(B,A), ac=sub3(C,A);
+    const abXac=cross3(ab,ac);
+    const denom=2*dot3(abXac,abXac);
+    if(denom<1e-9) return {ok:false}; // collinear
+    const t=[
+      (cross3(abXac,ab)[0]*dot3(ac,ac)+cross3(ac,abXac)[0]*dot3(ab,ab))/denom,
+      (cross3(abXac,ab)[1]*dot3(ac,ac)+cross3(ac,abXac)[1]*dot3(ab,ab))/denom,
+      (cross3(abXac,ab)[2]*dot3(ac,ac)+cross3(ac,abXac)[2]*dot3(ab,ab))/denom
+    ];
+    const center=[A[0]+t[0],A[1]+t[1],A[2]+t[2]];
+    return {ok:true, center, radius:len3(t), normal:norm3(abXac)};
+  }
+  function drawMarker(s,color,label){
+    ctx.setLineDash([]);
+    ctx.beginPath();ctx.arc(s[0],s[1],5.5*dpr,0,7);ctx.fillStyle=color;ctx.fill();
+    ctx.lineWidth=2*dpr;ctx.strokeStyle="#fff";ctx.stroke();
+    if(label){
+      ctx.fillStyle="#fff";ctx.font=`${9*dpr}px "IBM Plex Mono",monospace`;
+      ctx.textAlign="center";ctx.textBaseline="middle";
+      ctx.fillText(label,s[0],s[1]);
+    }
+  }
+  function drawHover(s,snapped){
+    ctx.setLineDash([]);
+    ctx.lineWidth=1.8*dpr;ctx.strokeStyle=getVar("--amber");
+    if(snapped){
+      const r=6*dpr;ctx.strokeRect(s[0]-r,s[1]-r,r*2,r*2); // square = vertex snap
+    }else{
+      ctx.beginPath();ctx.arc(s[0],s[1],6*dpr,0,7);ctx.stroke();
+    }
+  }
+  function drawTag(text,x,y){
+    ctx.font=`600 ${12*dpr}px "IBM Plex Mono",monospace`;
+    const w=ctx.measureText(text).width, padX=8*dpr, padY=5*dpr, h=17*dpr;
+    let bx=x-w/2-padX, by=y-h/2;
+    bx=Math.max(4*dpr,Math.min(canvas.width-w-2*padX-4*dpr,bx));
+    by=Math.max(4*dpr,Math.min(canvas.height-h-4*dpr,by));
+    ctx.fillStyle=getVar("--accent");
+    roundRect(bx,by,w+2*padX,h,5*dpr);ctx.fill();
+    ctx.fillStyle="#fff";ctx.textAlign="left";ctx.textBaseline="middle";
+    ctx.fillText(text,bx+padX,by+h/2+0.5*dpr);
+  }
+  function roundRect(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
+  }
+  function dist3(a,b){return Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2]);}
+
+  /* ---------- Ray picking (screen -> nearest surface/vertex point) ---------- */
+  function pickPoint(cssX,cssY){
+    if(!mesh||!stats) return null;
+    const rect=stage.getBoundingClientRect();
+    const px=(cssX-rect.left)*(canvas.width/rect.width);
+    const py=(cssY-rect.top)*(canvas.height/rect.height);
+    const c=stats.center; const {ox,oy,scale}=getView();
+    const v=mesh.verts, count=mesh.count;
+    let bestDepth=-Infinity, bestPt=null;
+    const snapPx=12*dpr; let bestSnap=snapPx, snapPt=null, snapDepth=-Infinity;
+    const P=[[0,0,0],[0,0,0],[0,0,0]];
+    for(let t=0;t<count;t++){
+      const o=t*9;
+      for(let k=0;k<3;k++){
+        const r=rot(v[o+k*3]-c[0],v[o+k*3+1]-c[1],v[o+k*3+2]-c[2]);
+        P[k][0]=ox+r[0]*scale; P[k][1]=oy-r[1]*scale; P[k][2]=r[2];
+      }
+      const x1=P[0][0],y1=P[0][1],x2=P[1][0],y2=P[1][1],x3=P[2][0],y3=P[2][1];
+      const den=(y2-y3)*(x1-x3)+(x3-x2)*(y1-y3);
+      if(den){
+        const a=((y2-y3)*(px-x3)+(x3-x2)*(py-y3))/den;
+        const b=((y3-y1)*(px-x3)+(x1-x3)*(py-y3))/den;
+        const g=1-a-b;
+        if(a>=-1e-4&&b>=-1e-4&&g>=-1e-4){
+          const depth=a*P[0][2]+b*P[1][2]+g*P[2][2];
+          if(depth>bestDepth){
+            bestDepth=depth;
+            bestPt=[a*v[o]+b*v[o+3]+g*v[o+6],
+                    a*v[o+1]+b*v[o+4]+g*v[o+7],
+                    a*v[o+2]+b*v[o+5]+g*v[o+8]];
+          }
+        }
+      }
+      for(let k=0;k<3;k++){
+        const d=Math.hypot(P[k][0]-px,P[k][1]-py);
+        if(d<bestSnap && P[k][2]>=snapDepth-1e-6){
+          bestSnap=d; snapDepth=P[k][2];
+          snapPt=[v[o+k*3],v[o+k*3+1],v[o+k*3+2]];
+        }
+      }
+    }
+    if(snapPt) return {point:snapPt,snapped:true};
+    if(bestPt) return {point:bestPt,snapped:false};
+    return null;
+  }
+
+  function drawGrid(W,H){
+    const dark=isDark();
+    ctx.strokeStyle=dark?"rgba(255,255,255,0.035)":"rgba(20,27,36,0.05)";
+    ctx.lineWidth=1;
+    const step=34*dpr;
+    ctx.beginPath();
+    for(let x=0;x<W;x+=step){ctx.moveTo(x,0);ctx.lineTo(x,H);}
+    for(let y=0;y<H;y+=step){ctx.moveTo(0,y);ctx.lineTo(W,y);}
+    ctx.stroke();
+  }
+
+  function drawBBox(ox,oy,scale,c){
+    const s=stats.size, mn=stats.min, mx=stats.max;
+    const corners=[
+      [mn[0],mn[1],mn[2]],[mx[0],mn[1],mn[2]],[mx[0],mx[1],mn[2]],[mn[0],mx[1],mn[2]],
+      [mn[0],mn[1],mx[2]],[mx[0],mn[1],mx[2]],[mx[0],mx[1],mx[2]],[mn[0],mx[1],mx[2]]
+    ].map(p=>{const r=rot(p[0]-c[0],p[1]-c[1],p[2]-c[2]);return[ox+r[0]*scale,oy-r[1]*scale];});
+    const edges=[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+    const acc=getVar("--amber");
+    ctx.strokeStyle=hexA(acc,0.55);
+    ctx.lineWidth=1.4*dpr;
+    ctx.setLineDash([5*dpr,4*dpr]);
+    ctx.beginPath();
+    edges.forEach(e=>{ctx.moveTo(corners[e[0]][0],corners[e[0]][1]);ctx.lineTo(corners[e[1]][0],corners[e[1]][1]);});
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function drawTriad(W,H){
+    const L=26*dpr, x0=26*dpr, y0=H-26*dpr;
+    const axes=[[1,0,0,"#d1495b","X"],[0,1,0,"#2a9d5c","Y"],[0,0,1,"#3d6fd1","Z"]];
+    ctx.lineWidth=2*dpr;
+    ctx.font=`${11*dpr}px "IBM Plex Mono",monospace`;
+    ctx.textAlign="center";ctx.textBaseline="middle";
+    axes.forEach(a=>{
+      const r=rot(a[0],a[1],a[2]);
+      const ex=x0+r[0]*L, ey=y0-r[1]*L;
+      ctx.strokeStyle=a[3];
+      ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(ex,ey);ctx.stroke();
+      ctx.fillStyle=a[3];
+      ctx.fillText(a[4], x0+r[0]*L*1.3, y0-r[1]*L*1.3);
+    });
+  }
+
+  function getVar(name){return getComputedStyle(document.documentElement).getPropertyValue(name).trim();}
+  function isDark(){
+    const t=document.documentElement.getAttribute("data-theme");
+    if(t==="dark")return true; if(t==="light")return false;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+  function hexA(hex,a){
+    hex=hex.replace("#","");
+    if(hex.length===3)hex=hex.split("").map(c=>c+c).join("");
+    const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+
+  /* ---------- Interaction ---------- */
+  let dragging=false, lx=0, ly=0, downX=0, downY=0, moved=false;
+  stage.addEventListener("pointerdown",e=>{
+    if(!mesh)return;
+    dragging=true;moved=false;
+    lx=downX=e.clientX;ly=downY=e.clientY;
+    stage.classList.add("dragging");
+    stage.setPointerCapture(e.pointerId);
+  });
+  stage.addEventListener("pointermove",e=>{
+    if(dragging){
+      if(Math.hypot(e.clientX-downX,e.clientY-downY)>4) moved=true;
+      az+=(e.clientX-lx)*0.01; el+=(e.clientY-ly)*0.01;
+      el=Math.max(-1.5,Math.min(1.5,el));
+      lx=e.clientX;ly=e.clientY;
+      requestAnimationFrame(render);
+      return;
+    }
+    // hover snap preview (measure mode, moderate meshes)
+    if(measureMode && mesh && mesh.count<=45000 && !hoverPending){
+      hoverPending=true;
+      const cx=e.clientX, cy=e.clientY;
+      requestAnimationFrame(()=>{
+        hoverPending=false;
+        hoverPt=pickPoint(cx,cy);
+        render();
+      });
+    }
+  });
+  ["pointerup","pointercancel"].forEach(ev=>stage.addEventListener(ev,e=>{
+    const wasDragging=dragging;
+    dragging=false;stage.classList.remove("dragging");
+    if(ev==="pointerup" && measureMode && wasDragging && !moved){
+      const p=pickPoint(e.clientX,e.clientY);
+      if(p){
+        if(measurePts.length>=maxPts()) measurePts=[];
+        measurePts.push(p.point);
+        updateMeasure();
+        render();
+      }
+    }
+  }));
+  stage.addEventListener("pointerleave",()=>{ if(hoverPt){hoverPt=null;render();} });
+
+  /* ---------- Measure UI ---------- */
+  const distBtn=$("#distBtn"), circBtn=$("#circBtn"), clearBtn=$("#clearBtn"), hud=$("#hud");
+  function setMode(m){
+    measureMode = (measureMode===m) ? "" : m;   // toggle off if same
+    measurePts=[]; hoverPt=null;
+    distBtn.classList.toggle("on",measureMode==="dist");
+    circBtn.classList.toggle("on",measureMode==="circle");
+    distBtn.setAttribute("aria-pressed",String(measureMode==="dist"));
+    circBtn.setAttribute("aria-pressed",String(measureMode==="circle"));
+    stage.classList.toggle("measure",!!measureMode);
+    updateMeasure(); render();
+  }
+  distBtn.addEventListener("click",()=>setMode("dist"));
+  circBtn.addEventListener("click",()=>setMode("circle"));
+  clearBtn.addEventListener("click",()=>{ measurePts=[]; hoverPt=null; updateMeasure(); render(); });
+
+  function updateMeasure(){
+    const mblock=$("#mblock"), cblock=$("#cblock");
+    if(!measureMode){ hud.classList.add("hidden"); mblock.classList.add("hidden"); cblock.classList.add("hidden"); clearBtn.classList.add("hidden"); return; }
+    hud.classList.remove("hidden");
+    clearBtn.classList.toggle("hidden", measurePts.length===0);
+    const need=maxPts();
+
+    if(measureMode==="dist"){
+      cblock.classList.add("hidden");
+      if(measurePts.length===2){
+        const a=measurePts[0], b=measurePts[1], d=dist3(a,b);
+        hud.innerHTML='⟷ <span class="d">'+fmt(d)+' mm</span>';
+        $("#mDist").textContent=fmt(d);
+        $("#mDx").textContent=fmt(Math.abs(a[0]-b[0]));
+        $("#mDy").textContent=fmt(Math.abs(a[1]-b[1]));
+        $("#mDz").textContent=fmt(Math.abs(a[2]-b[2]));
+        mblock.classList.remove("hidden");
+      }else{
+        hud.textContent = measurePts.length? "Point 1 set · click the 2nd point" : "Pick 2 points to measure distance";
+        mblock.classList.add("hidden");
+      }
+    } else { // circle
+      mblock.classList.add("hidden");
+      if(measurePts.length===3){
+        const cir=fitCircle(measurePts[0],measurePts[1],measurePts[2]);
+        if(cir.ok){
+          const d=cir.radius*2;
+          hud.innerHTML='⌀ <span class="d">'+fmt(d)+' mm</span>';
+          $("#cDia").textContent=fmt(d);
+          $("#cRad").textContent=fmt(cir.radius);
+          $("#cCirc").textContent=fmt(Math.PI*d);
+          $("#cStat").textContent="Valid ✓";
+          $("#cStat").style.color="var(--good)";
+        }else{
+          hud.textContent="Points are collinear — no circle";
+          $("#cDia").textContent="—";$("#cRad").textContent="—";$("#cCirc").textContent="—";
+          $("#cStat").textContent="Collinear ✗"; $("#cStat").style.color="#c23b3b";
+        }
+        cblock.classList.remove("hidden");
+      }else{
+        hud.textContent = "Pick 3 points for a circle ("+measurePts.length+"/3)";
+        cblock.classList.add("hidden");
+      }
+    }
+  }
+  stage.addEventListener("wheel",e=>{
+    if(!mesh)return;
+    e.preventDefault();
+    zoom*=e.deltaY<0?1.1:0.9;
+    zoom=Math.max(0.3,Math.min(6,zoom));
+    requestAnimationFrame(render);
+  },{passive:false});
+
+  // re-render on theme change
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{if(mesh)render();});
+
+  fitCanvas();
+})();
+</script>
