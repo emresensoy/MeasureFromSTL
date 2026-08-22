@@ -66,6 +66,7 @@ STL files are **unitless**. Values are read without scaling and assumed to be in
 | `index.html` | The complete tool — self-contained, open directly in a browser or via the live demo. |
 | `test_geom.py` | Validates the diameter / length / volume math against a synthetic cylinder. |
 | `test_circle.py` | Validates the 3-point circle fit against a known tilted circle. |
+| `test_section.py` | Validates the plane-slicing (cross-section) against a cylinder on all axes. |
 | `docs/preview.svg` | Interface preview used in this README. |
 | `LICENSE` | MIT license. |
 
@@ -76,6 +77,7 @@ The geometry math is verified with two standalone Python scripts (no dependencie
 ```bash
 python test_geom.py
 python test_circle.py
+python test_section.py
 ```
 
 `test_geom.py` builds a ⌀20 × 50 mm cylinder and confirms length = 50.000, diameter = 20.000,
