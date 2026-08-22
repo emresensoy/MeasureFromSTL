@@ -1,9 +1,19 @@
 # Shaft Gauge — Measure From STL
 
+[![Live demo](https://img.shields.io/badge/live%20demo-GitHub%20Pages-0d7c86)](https://emresensoy.github.io/MeasureFromSTL/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+![No build](https://img.shields.io/badge/build-none%20·%20single%20file-8b94a3)
+
 A single-file, browser-based tool for reading dimensions off an **STL** mesh. Load a
 model and get **diameter** and **length** in millimeters, measure the **distance between
 two points**, or fit a **circle through three points**. Everything runs locally in the
 browser — the file never leaves your device.
+
+**▶ Live demo: https://emresensoy.github.io/MeasureFromSTL/**
+
+![Shaft Gauge interface preview](docs/preview.svg)
+
+> *Interface preview (illustration). To drop in a real screenshot, replace `docs/preview.svg`.*
 
 ## Features
 
@@ -19,7 +29,7 @@ browser — the file never leaves your device.
 
 ## Usage
 
-1. Open **`MeasureFromSTL.html`** in any modern browser (double-click the file — no server needed).
+1. Use the **[live demo](https://emresensoy.github.io/MeasureFromSTL/)**, or open **`index.html`** locally in any modern browser (double-click the file — no server needed).
 2. Drag an `.stl` file onto the stage, or click **Choose file**.
 3. Read the results in the right-hand panel. Rotate the model by dragging; zoom with the wheel.
 4. To measure by hand:
@@ -51,9 +61,11 @@ STL files are **unitless**. Values are read without scaling and assumed to be in
 
 | File | Description |
 |------|-------------|
-| `MeasureFromSTL.html` | The complete tool — self-contained, open directly in a browser. |
+| `index.html` | The complete tool — self-contained, open directly in a browser or via the live demo. |
 | `test_geom.py` | Validates the diameter / length / volume math against a synthetic cylinder. |
 | `test_circle.py` | Validates the 3-point circle fit against a known tilted circle. |
+| `docs/preview.svg` | Interface preview used in this README. |
+| `LICENSE` | MIT license. |
 
 ## Tests
 
@@ -81,3 +93,7 @@ from three points on a tilted plane and confirms collinear points are rejected.
 
 All parsing and computation happen in the browser. No file is uploaded, and no network
 request is made for the model data.
+
+## License
+
+Released under the [MIT License](LICENSE) © 2026 Emre ŞENSOY.
