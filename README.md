@@ -22,6 +22,7 @@ browser — the file never leaves your device.
 - **Diameter & length** — automatic shaft-axis detection, or pick the axis manually (Auto / X / Y / Z).
 - **Point-to-point distance** — click two points; shows the 3D distance plus ΔX / ΔY / ΔZ components.
 - **3-point circle** — click three points on a round feature (bore, shaft cross-section) to fit a circle and read its **diameter, radius, and circumference** — works on tilted planes.
+- **2D cross-section** — slice the model on the **XY / XZ / YZ** plane with a movable slider; read the section's **width × height** and measure on the contour (distance and 3-point circle).
 - **Vertex snapping** — the cursor snaps to nearby mesh vertices for precise edge/corner picks.
 - **Interactive 3D view** — drag to rotate, mouse wheel to zoom; dashed bounding box and axis triad for orientation.
 - **Extras** — mesh volume, bounding diagonal, triangle count.
@@ -35,6 +36,7 @@ browser — the file never leaves your device.
 4. To measure by hand:
    - Click **📐 Distance**, then click two points.
    - Click **⌀ Circle**, then click three points around a round feature.
+   - Click **✂ Section** to slice the model: pick the plane (XY / XZ / YZ), drag the slider to move the cut, and read the section's width × height. Distance/Circle picks snap to the section contour while sectioning is active.
    - **Clear** resets the current picks. Clicking a mode button again exits that mode.
 
 > **Tip:** for the most accurate bore/shaft diameter, spread the three circle points roughly

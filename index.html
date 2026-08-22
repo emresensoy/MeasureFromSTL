@@ -205,6 +205,20 @@
   .comp .cl{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
   .comp .cv{font-family:"IBM Plex Mono",monospace;font-weight:600;font-variant-numeric:tabular-nums;margin-top:2px;font-size:.95rem}
 
+  /* section */
+  #sectionBtn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .section-ctrl{
+    position:absolute;top:10px;left:10px;right:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    background:var(--panel);border:1px solid var(--line-strong);border-radius:10px;padding:8px 12px;box-shadow:var(--shadow)
+  }
+  .section-ctrl .seg button{padding:5px 11px}
+  .section-ctrl .sld{display:flex;align-items:center;gap:9px;flex:1;min-width:180px}
+  .section-ctrl input[type=range]{flex:1;accent-color:var(--accent);cursor:pointer}
+  .section-ctrl .pos{font-family:"IBM Plex Mono",monospace;font-size:.8rem;font-weight:600;color:var(--ink);
+    font-variant-numeric:tabular-nums;white-space:nowrap;min-width:9ch;text-align:right}
+  .section-ctrl .plane-lbl{font-size:.72rem;color:var(--muted);white-space:nowrap}
+  .measure-hud.bottom{top:auto;bottom:10px}
+
   input[type=file]{display:none}
   .hidden{display:none!important}
 </style>
@@ -226,6 +240,18 @@
     <section class="card stage-card">
       <div class="stage" id="stage">
         <canvas id="view"></canvas>
+        <div class="section-ctrl hidden" id="sectionCtrl">
+          <div class="seg" id="planeSeg" role="group" aria-label="Section plane">
+            <button data-nrm="2" class="on" type="button">XY</button>
+            <button data-nrm="1" type="button">XZ</button>
+            <button data-nrm="0" type="button">YZ</button>
+          </div>
+          <div class="sld">
+            <span class="plane-lbl" id="secAxisLbl">Z =</span>
+            <input type="range" id="secSlider" min="0" max="100" step="0.01" value="50" aria-label="Section position">
+            <span class="pos" id="secVal">—</span>
+          </div>
+        </div>
         <div class="measure-hud hidden" id="hud"></div>
         <div class="drop" id="drop">
           <div class="ring">
@@ -242,6 +268,7 @@
       <div class="stage-bar">
         <span class="fname" id="fname">No file loaded</span>
         <button class="btn ghost hidden" id="reloadBtn" type="button" style="padding:5px 12px;font-size:.78rem">Load another</button>
+        <button class="btn ghost hidden" id="sectionBtn" type="button" style="padding:5px 12px;font-size:.78rem" aria-pressed="false">✂ Section</button>
         <button class="btn ghost hidden" id="distBtn" type="button" style="padding:5px 12px;font-size:.78rem" aria-pressed="false">📐 Distance</button>
         <button class="btn ghost hidden" id="circBtn" type="button" style="padding:5px 12px;font-size:.78rem" aria-pressed="false">⌀ Circle</button>
         <button class="btn ghost hidden" id="clearBtn" type="button" style="padding:5px 12px;font-size:.78rem">Clear</button>
@@ -290,6 +317,25 @@
             <div>Bounding diagonal <b id="mDiag">—</b></div>
             <div>Volume <b id="mVol">—</b></div>
             <div>Triangles <b id="mTri">—</b></div>
+          </div>
+
+          <div class="mblock hidden" id="sblock">
+            <p class="eyebrow" style="margin-bottom:10px">Cross-section (2D)</p>
+            <div class="primary" style="margin-bottom:0">
+              <div class="metric">
+                <div class="lbl"><span id="sWLbl">Width</span></div>
+                <div class="val"><span id="sW">—</span><span class="u">mm</span></div>
+              </div>
+              <div class="metric">
+                <div class="lbl"><span id="sHLbl">Height</span></div>
+                <div class="val"><span id="sH">—</span><span class="u">mm</span></div>
+              </div>
+            </div>
+            <div class="comp">
+              <div class="c"><div class="cl" id="sULbl">U range</div><div class="cv" id="sU">—</div></div>
+              <div class="c"><div class="cl" id="sVLbl">V range</div><div class="cv" id="sV">—</div></div>
+              <div class="c"><div class="cl">Segments</div><div class="cv" id="sLoops">—</div></div>
+            </div>
           </div>
 
           <div class="mblock hidden" id="mblock">
@@ -375,14 +421,19 @@
         mesh=tris;
         stats=computeStats(mesh);
         measureMode=""; measurePts=[]; hoverPt=null; zoom=1; panX=0; panY=0;
+        sectionOn=false; sectionAxis=2; sectionSegs=[]; secBBox=null;
         stage.classList.remove("measure");
+        $("#sectionCtrl").classList.add("hidden");
+        $("#hud").classList.remove("bottom");
+        $("#sectionBtn").classList.remove("hidden","on");
         $("#distBtn").classList.remove("hidden","on");
         $("#circBtn").classList.remove("hidden","on");
+        document.querySelectorAll("#planeSeg button").forEach(x=>x.classList.toggle("on",x.dataset.nrm==="2"));
         drop.classList.add("hidden");
         $("#reloadBtn").classList.remove("hidden");
         empty.classList.add("hidden");
         results.classList.remove("hidden");
-        render(); update(); updateMeasure();
+        render(); update(); updateMeasure(); updateSection();
       }catch(err){ showErr("Could not read the file: "+err.message); console.error(err); }
     };
     r.onerror=()=>showErr("File read error.");
@@ -525,6 +576,9 @@
   let az=-0.7, el=0.5, zoom=1, panX=0, panY=0;
   let measureMode="", measurePts=[], hoverPt=null, hoverPending=false; // ""|"dist"|"circle"
   const maxPts=()=>measureMode==="circle"?3:2;
+  let sectionOn=false, sectionAxis=2, sectionPos=0, sectionSegs=[], secBBox=null;
+  const inU=n=>(n+1)%3, inV=n=>(n+2)%3; // in-plane axes for a given normal axis
+  const AXN=["X","Y","Z"];
   const ctx=canvas.getContext("2d");
   let dpr=Math.min(window.devicePixelRatio||1,2);
 
@@ -558,6 +612,7 @@
 
   function render(){
     if(!mesh||!stats){ ctx.clearRect(0,0,canvas.width,canvas.height); return; }
+    if(sectionOn){ renderSection(); return; }
     const W=canvas.width,H=canvas.height;
     ctx.clearRect(0,0,W,H);
     // subtle grid backdrop
@@ -614,9 +669,10 @@
   function drawMeasure(){
     if(!measurePts.length && !hoverPt) return;
     const acc=getVar("--accent");
+    const PJ = sectionOn?project2D:projectPoint;
     if(measureMode==="dist" && measurePts.length===2){
-      const A=projectPoint.apply(null,measurePts[0]);
-      const B=projectPoint.apply(null,measurePts[1]);
+      const A=PJ.apply(null,measurePts[0]);
+      const B=PJ.apply(null,measurePts[1]);
       ctx.setLineDash([]);
       ctx.strokeStyle=acc; ctx.lineWidth=2*dpr;
       ctx.beginPath();ctx.moveTo(A[0],A[1]);ctx.lineTo(B[0],B[1]);ctx.stroke();
@@ -639,17 +695,17 @@
             cir.center[1]+cir.radius*(Math.cos(a)*u[1]+Math.sin(a)*v[1]),
             cir.center[2]+cir.radius*(Math.cos(a)*u[2]+Math.sin(a)*v[2])
           ];
-          const s=projectPoint.apply(null,p);
+          const s=PJ.apply(null,p);
           i===0?ctx.moveTo(s[0],s[1]):ctx.lineTo(s[0],s[1]);
         }
         ctx.stroke();
-        const cs=projectPoint.apply(null,cir.center);
+        const cs=PJ.apply(null,cir.center);
         drawMarker(cs,amb,"");
         drawTag("⌀ "+fmt(cir.radius*2)+" mm",cs[0],cs[1]-16*dpr);
       }
     }
-    measurePts.forEach((p,i)=>drawMarker(projectPoint.apply(null,p),acc,String(i+1)));
-    if(hoverPt) drawHover(projectPoint.apply(null,hoverPt.point),hoverPt.snapped);
+    measurePts.forEach((p,i)=>drawMarker(PJ.apply(null,p),acc,String(i+1)));
+    if(hoverPt) drawHover(PJ.apply(null,hoverPt.point),hoverPt.snapped);
   }
 
   /* vector helpers + 3-point circle fit */
@@ -754,6 +810,127 @@
     return null;
   }
 
+  /* ---------- Cross-section (plane slicing) ---------- */
+  function planePt(U,V){
+    const p=[0,0,0]; p[sectionAxis]=sectionPos; p[inU(sectionAxis)]=U; p[inV(sectionAxis)]=V; return p;
+  }
+  function getView2D(){
+    const W=canvas.width,H=canvas.height;
+    const u=inU(sectionAxis), v=inV(sectionAxis);
+    const su=stats.size[u]||1, sv=stats.size[v]||1;
+    const scale=Math.min(W,H)/Math.max(su,sv)/1.25*zoom;
+    return {W,H,u,v,scale,cu:stats.center[u],cv:stats.center[v],ox:W/2+panX,oy:H/2+panY};
+  }
+  function project2D(x,y,z){
+    const p=[x,y,z], g=getView2D();
+    return [g.ox+(p[g.u]-g.cu)*g.scale, g.oy-(p[g.v]-g.cv)*g.scale, 0];
+  }
+  function screenToPlane(px,py){
+    const g=getView2D();
+    return planePtFor((px-g.ox)/g.scale+g.cu, g.cv-(py-g.oy)/g.scale);
+  }
+  function planePtFor(U,V){ return planePt(U,V); }
+
+  function computeSection(){
+    const n=sectionAxis, c=sectionPos, v=mesh.verts, count=mesh.count, segs=[];
+    const E=[[0,1],[1,2],[2,0]];
+    for(let t=0;t<count;t++){
+      const o=t*9;
+      const P=[[v[o],v[o+1],v[o+2]],[v[o+3],v[o+4],v[o+5]],[v[o+6],v[o+7],v[o+8]]];
+      const d=[P[0][n]-c,P[1][n]-c,P[2][n]-c];
+      const hits=[];
+      for(const e of E){
+        const i=e[0],j=e[1],di=d[i],dj=d[j];
+        if((di<0&&dj>=0)||(di>=0&&dj<0)){
+          const tt=di/(di-dj);
+          hits.push([P[i][0]+(P[j][0]-P[i][0])*tt,P[i][1]+(P[j][1]-P[i][1])*tt,P[i][2]+(P[j][2]-P[i][2])*tt]);
+        }
+      }
+      if(hits.length===2) segs.push([hits[0],hits[1]]);
+    }
+    sectionSegs=segs;
+    const u=inU(n), w=inV(n);
+    let mnu=Infinity,mxu=-Infinity,mnv=Infinity,mxv=-Infinity;
+    for(const s of segs) for(const p of s){
+      if(p[u]<mnu)mnu=p[u]; if(p[u]>mxu)mxu=p[u];
+      if(p[w]<mnv)mnv=p[w]; if(p[w]>mxv)mxv=p[w];
+    }
+    secBBox = segs.length ? {mnu,mxu,mnv,mxv,wu:mxu-mnu,hv:mxv-mnv} : null;
+  }
+
+  function renderSection(){
+    const W=canvas.width,H=canvas.height;
+    ctx.clearRect(0,0,W,H);
+    drawGrid(W,H);
+    // bounding rectangle of the section (dashed amber)
+    if(secBBox){
+      const c=[
+        project2D.apply(null,planePt(secBBox.mnu,secBBox.mnv)),
+        project2D.apply(null,planePt(secBBox.mxu,secBBox.mnv)),
+        project2D.apply(null,planePt(secBBox.mxu,secBBox.mxv)),
+        project2D.apply(null,planePt(secBBox.mnu,secBBox.mxv))
+      ];
+      ctx.strokeStyle=hexA(getVar("--amber"),0.6); ctx.lineWidth=1.4*dpr; ctx.setLineDash([5*dpr,4*dpr]);
+      ctx.beginPath();
+      for(let i=0;i<4;i++){const a=c[i],b=c[(i+1)%4];ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);}
+      ctx.stroke(); ctx.setLineDash([]);
+    }
+    // contour segments
+    if(sectionSegs.length){
+      ctx.strokeStyle=getVar("--accent-ink"); ctx.lineWidth=2.2*dpr;
+      ctx.beginPath();
+      for(const s of sectionSegs){
+        const a=project2D(s[0][0],s[0][1],s[0][2]), b=project2D(s[1][0],s[1][1],s[1][2]);
+        ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]);
+      }
+      ctx.stroke();
+    } else {
+      ctx.fillStyle=getVar("--muted");
+      ctx.font=`${13*dpr}px "IBM Plex Sans",sans-serif`; ctx.textAlign="center"; ctx.textBaseline="middle";
+      ctx.fillText("No intersection at this position — move the slider", W/2, H/2);
+    }
+    // in-plane axis labels (bottom-left)
+    const u=inU(sectionAxis), v=inV(sectionAxis);
+    ctx.font=`600 ${12*dpr}px "IBM Plex Mono",monospace`; ctx.textAlign="left"; ctx.textBaseline="middle";
+    ctx.fillStyle=getVar("--muted");
+    ctx.fillText("→ "+AXN[u]+"   ↑ "+AXN[v], 16*dpr, H-20*dpr);
+    drawMeasure();
+  }
+
+  function closestParam(px,py,a,b){
+    const dx=b[0]-a[0], dy=b[1]-a[1], L=dx*dx+dy*dy;
+    if(L<1e-9) return 0;
+    let t=((px-a[0])*dx+(py-a[1])*dy)/L;
+    return Math.max(0,Math.min(1,t));
+  }
+  function pickSection(cssX,cssY){
+    const rect=stage.getBoundingClientRect();
+    const px=(cssX-rect.left)*(canvas.width/rect.width);
+    const py=(cssY-rect.top)*(canvas.height/rect.height);
+    // snap to contour endpoints
+    let best=12*dpr, snapP=null;
+    for(const s of sectionSegs) for(const p of s){
+      const sp=project2D(p[0],p[1],p[2]);
+      const dd=Math.hypot(sp[0]-px,sp[1]-py);
+      if(dd<best){best=dd; snapP=p;}
+    }
+    if(snapP) return {point:snapP.slice(),snapped:true};
+    // else nearest point along a contour segment
+    let bestSeg=14*dpr, segP=null;
+    for(const s of sectionSegs){
+      const a=project2D(s[0][0],s[0][1],s[0][2]), b=project2D(s[1][0],s[1][1],s[1][2]);
+      const t=closestParam(px,py,a,b);
+      const cx=a[0]+(b[0]-a[0])*t, cy=a[1]+(b[1]-a[1])*t;
+      const dd=Math.hypot(cx-px,cy-py);
+      if(dd<bestSeg){ bestSeg=dd;
+        segP=[s[0][0]+(s[1][0]-s[0][0])*t, s[0][1]+(s[1][1]-s[0][1])*t, s[0][2]+(s[1][2]-s[0][2])*t];
+      }
+    }
+    if(segP) return {point:segP,snapped:false};
+    // else a free point on the plane
+    return {point:screenToPlane(px,py),snapped:false};
+  }
+
   function drawGrid(W,H){
     const dark=isDark();
     ctx.strokeStyle=dark?"rgba(255,255,255,0.035)":"rgba(20,27,36,0.05)";
@@ -827,7 +1004,7 @@
   stage.addEventListener("pointermove",e=>{
     if(dragMode){
       if(Math.hypot(e.clientX-downX,e.clientY-downY)>4) moved=true;
-      if(dragMode==="pan"){
+      if(dragMode==="pan" || sectionOn){ // no rotation in 2D section view
         const ratio=canvas.width/stage.getBoundingClientRect().width;
         panX+=(e.clientX-lx)*ratio; panY+=(e.clientY-ly)*ratio;
       }else{
@@ -838,13 +1015,13 @@
       requestAnimationFrame(render);
       return;
     }
-    // hover snap preview (measure mode, moderate meshes)
-    if(measureMode && mesh && mesh.count<=45000 && !hoverPending){
+    // hover snap preview
+    if(measureMode && mesh && (sectionOn || mesh.count<=45000) && !hoverPending){
       hoverPending=true;
       const cx=e.clientX, cy=e.clientY;
       requestAnimationFrame(()=>{
         hoverPending=false;
-        hoverPt=pickPoint(cx,cy);
+        hoverPt=sectionOn?pickSection(cx,cy):pickPoint(cx,cy);
         render();
       });
     }
@@ -854,7 +1031,7 @@
     dragMode=null;stage.classList.remove("dragging");
     // only a left-button click (rotate mode, no drag) places a measurement point
     if(ev==="pointerup" && measureMode && wasMode==="rotate" && !moved){
-      const p=pickPoint(e.clientX,e.clientY);
+      const p=sectionOn?pickSection(e.clientX,e.clientY):pickPoint(e.clientX,e.clientY);
       if(p){
         if(measurePts.length>=maxPts()) measurePts=[];
         measurePts.push(p.point);
@@ -926,6 +1103,60 @@
       }
     }
   }
+  /* ---------- Section UI ---------- */
+  const sectionBtn=$("#sectionBtn"), secSlider=$("#secSlider");
+  function setupSlider(){
+    const mn=stats.min[sectionAxis], mx=stats.max[sectionAxis];
+    secSlider.min=mn; secSlider.max=mx; secSlider.step=Math.max((mx-mn)/500,1e-4);
+    sectionPos=(mn+mx)/2; secSlider.value=sectionPos;
+    $("#secAxisLbl").textContent=AXN[sectionAxis]+" =";
+  }
+  let secPending=false;
+  function scheduleSection(){
+    if(secPending)return; secPending=true;
+    requestAnimationFrame(()=>{ secPending=false; computeSection(); updateSection(); render(); });
+  }
+  function setSection(){
+    sectionOn=!sectionOn;
+    sectionBtn.classList.toggle("on",sectionOn);
+    sectionBtn.setAttribute("aria-pressed",String(sectionOn));
+    $("#sectionCtrl").classList.toggle("hidden",!sectionOn);
+    hud.classList.toggle("bottom",sectionOn);
+    measurePts=[]; hoverPt=null; panX=0; panY=0; zoom=1;
+    if(sectionOn){ setupSlider(); computeSection(); }
+    updateSection(); updateMeasure(); render();
+  }
+  sectionBtn.addEventListener("click",setSection);
+  secSlider.addEventListener("input",e=>{ sectionPos=parseFloat(e.target.value); scheduleSection(); });
+  document.querySelectorAll("#planeSeg button").forEach(b=>b.addEventListener("click",()=>{
+    sectionAxis=Number(b.dataset.nrm);
+    document.querySelectorAll("#planeSeg button").forEach(x=>x.classList.toggle("on",x===b));
+    measurePts=[]; hoverPt=null; panX=0; panY=0;
+    setupSlider(); computeSection(); updateSection(); updateMeasure(); render();
+  }));
+
+  function updateSection(){
+    const sblock=$("#sblock");
+    if(!sectionOn){ sblock.classList.add("hidden"); return; }
+    sblock.classList.remove("hidden");
+    const u=inU(sectionAxis), v=inV(sectionAxis);
+    $("#secVal").textContent=fmt(sectionPos)+" mm";
+    $("#sWLbl").textContent="Width ("+AXN[u]+")";
+    $("#sHLbl").textContent="Height ("+AXN[v]+")";
+    $("#sULbl").textContent=AXN[u]+" range";
+    $("#sVLbl").textContent=AXN[v]+" range";
+    if(secBBox){
+      $("#sW").textContent=fmt(secBBox.wu);
+      $("#sH").textContent=fmt(secBBox.hv);
+      $("#sU").textContent=fmt(secBBox.mnu)+" … "+fmt(secBBox.mxu);
+      $("#sV").textContent=fmt(secBBox.mnv)+" … "+fmt(secBBox.mxv);
+      $("#sLoops").textContent=sectionSegs.length;
+    }else{
+      $("#sW").textContent="—";$("#sH").textContent="—";
+      $("#sU").textContent="—";$("#sV").textContent="—";$("#sLoops").textContent="0";
+    }
+  }
+
   stage.addEventListener("wheel",e=>{
     if(!mesh)return;
     e.preventDefault();
