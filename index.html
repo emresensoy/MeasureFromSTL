@@ -993,6 +993,7 @@
   stage.addEventListener("contextmenu",e=>e.preventDefault()); // allow right-drag pan
   stage.addEventListener("pointerdown",e=>{
     if(!mesh)return;
+    if(e.target.closest(".section-ctrl")) return; // let the overlay controls handle their own clicks
     // right button (or middle) pans; left rotates
     dragMode = (e.button===2 || e.button===1) ? "pan" : "rotate";
     moved=false;
@@ -1016,6 +1017,7 @@
       return;
     }
     // hover snap preview
+    if(e.target.closest && e.target.closest(".section-ctrl")){ if(hoverPt){hoverPt=null;render();} return; }
     if(measureMode && mesh && (sectionOn || mesh.count<=45000) && !hoverPending){
       hoverPending=true;
       const cx=e.clientX, cy=e.clientY;
